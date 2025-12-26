@@ -48,6 +48,7 @@ export const auth = betterAuth({
         crossSubDomainCookies: {
             enabled: true
         },
+        crossSiteCookies: true, // ✅ CRITICAL: Allow extension to send cookies
         useSecureCookies: process.env.NODE_ENV === "production"
     }
 })
