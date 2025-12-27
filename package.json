@@ -4,8 +4,9 @@
     "private": true,
     "scripts": {
         "dev": "next dev",
-        "build": "next build",
-        "start": "next start"
+        "build": "npx @better-auth/cli migrate && next build",
+        "start": "next start",
+        "migrate": "npx @better-auth/cli migrate"
     },
     "dependencies": {
         "next": "^14.2.0",
