@@ -16,7 +16,7 @@ export default function SignInPage() {
         try {
             await signIn.social({
                 provider: "google",
-                callbackURL: "/dashboard" // Or handle success via popup if client configured
+                callbackURL: "/auth-success" // Redirect here after successful auth
             });
             // Note: signIn.social redirects by default, so below code might not be reached immediately
         } catch (error) {
