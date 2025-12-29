@@ -1,7 +1,9 @@
 import { betterAuth } from "better-auth"
-import { neon } from "@neondatabase/serverless"
+import { drizzleAdapter } from "better-auth/adapters/drizzle"
+import { db } from "./db"
+import * as schema from "./schema"
 
-// ✅ Validate environment variables at startup
+// ✅ Validate environment variables
 if (!process.env.DATABASE_URL) {
     console.error('[Auth] ❌ DATABASE_URL is not set');
 }
@@ -15,19 +17,21 @@ if (!process.env.GOOGLE_CLIENT_SECRET) {
     console.error('[Auth] ❌ GOOGLE_CLIENT_SECRET is not set');
 }
 
-// ✅ Create Neon HTTP client - better for serverless
-const sql = neon(process.env.DATABASE_URL!);
-
 export const auth = betterAuth({
     // ✅ Base configuration
     baseURL: process.env.BETTER_AUTH_URL || "https://sidebar-notepads.vercel.app",
     secret: process.env.BETTER_AUTH_SECRET!,
 
-    // ✅ Database - Using neon HTTP driver (serverless optimized)
-    database: {
+    // ✅ Database - Using Drizzle adapter with Neon
+    database: drizzleAdapter(db, {
         provider: "pg",
-        url: process.env.DATABASE_URL!
-    },
+        schema: {
+            user: schema.user,
+            session: schema.session,
+            account: schema.account,
+            verification: schema.verification,
+        }
+    }),
 
     // ✅ Session configuration
     session: {
@@ -71,6 +75,7 @@ export const auth = betterAuth({
     }
 })
 
-console.log('[Auth] ✅ Better Auth initialized successfully');
+console.log('[Auth] ✅ Better Auth with Drizzle adapter initialized');
+
 
 
