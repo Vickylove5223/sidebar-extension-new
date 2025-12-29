@@ -1,4 +1,54 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+
 export default function Home() {
+    const [checking, setChecking] = useState(true)
+    const router = useRouter()
+
+    useEffect(() => {
+        // Check if user just completed OAuth
+        const checkAuthAndRedirect = async () => {
+            try {
+                const res = await fetch('/api/auth/session', {
+                    credentials: 'include',
+                    cache: 'no-store'
+                })
+
+                if (res.ok) {
+                    const data = await res.json()
+
+                    if (data.session && data.user) {
+                        // User just signed in via OAuth, redirect to auth-success
+                        router.push('/auth-success')
+                        return
+                    }
+                }
+            } catch (error) {
+                console.error('Session check error:', error)
+            }
+
+            // No session or not from OAuth, show landing page
+            setChecking(false)
+        }
+
+        checkAuthAndRedirect()
+    }, [router])
+
+    if (checking) {
+        return (
+            <main className="min-h-screen bg-white flex items-center justify-center">
+                <div className="text-center">
+                    <div className="w-16 h-16 mx-auto mb-4">
+                        <div className="w-full h-full border-4 border-gray-200 border-t-indigo-600 rounded-full animate-spin" />
+                    </div>
+                    <p className="text-gray-600">Loading...</p>
+                </div>
+            </main>
+        )
+    }
+
     return (
         <main className="min-h-screen bg-white flex items-center justify-center px-4">
             <div className="max-w-2xl mx-auto text-center py-20">

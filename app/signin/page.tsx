@@ -15,8 +15,9 @@ export default function SignInPage() {
 
         try {
             await signIn.social({
-                provider: "google",
-                callbackURL: "/auth-success" // Redirect here after successful auth
+                provider: "google"
+                // ✅ No callbackURL - Better Auth will redirect to "/" after setting cookies
+                // This ensures the session cookie is fully propagated before redirect
             });
             // Note: signIn.social redirects by default, so below code might not be reached immediately
         } catch (error) {
