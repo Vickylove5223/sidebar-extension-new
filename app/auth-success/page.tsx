@@ -1,101 +1,145 @@
-'use client'
+'use client';
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useState, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 
-export default function AuthSuccessPage() {
+function AuthSuccessContent() {
     const [status, setStatus] = useState<'checking' | 'syncing' | 'complete' | 'error'>('checking')
     const [message, setMessage] = useState('Verifying authentication...')
     const router = useRouter()
+    const searchParams = useSearchParams()
+    const checkoutId = searchParams.get('checkout_id')
 
     useEffect(() => {
         const handleAuthSuccess = async () => {
-            // Retry configuration
-            const maxRetries = 5
-            const initialDelay = 500 // Start with 500ms
+            // Check if this is a post-payment callback
+            const isPaymentCallback = !!checkoutId
 
-            for (let attempt = 0; attempt <= maxRetries; attempt++) {
+            if (isPaymentCallback) {
+                // ✅ POST-PAYMENT FLOW
+                setMessage('🎉 Payment successful! Setting up your Pro account...')
+                setStatus('syncing')
+
+                // Give Polar webhook time to process (2-3 seconds)
+                await new Promise(resolve => setTimeout(resolve, 2500))
+
+                // Verify session and Pro status
                 try {
-                    // Wait before checking (exponential backoff)
-                    if (attempt > 0) {
-                        const delay = initialDelay * Math.pow(2, attempt - 1)
-                        setMessage(`Verifying authentication... (attempt ${attempt}/${maxRetries})`)
-                        await new Promise(resolve => setTimeout(resolve, delay))
-                    }
-
-                    // Check session
-                    const sessionResponse = await fetch('/api/auth/session', {
+                    const sessionResponse = await fetch('/api/auth/session-status', {
                         credentials: 'include',
-                        cache: 'no-store' // Force fresh request
+                        cache: 'no-store'
                     })
 
-                    if (!sessionResponse.ok) {
-                        // If not last attempt, retry
-                        if (attempt < maxRetries) {
-                            continue
+                    if (sessionResponse.ok) {
+                        const sessionData = await sessionResponse.json()
+
+                        if (sessionData.hasPro) {
+                            setMessage('✅ Pro account activated! Syncing your notes to Google Drive...')
+
+                            // Notify extension about successful payment
+                            if (window.opener && !window.opener.closed) {
+                                window.opener.postMessage({
+                                    type: 'PAYMENT_SUCCESS',
+                                    user: sessionData.user,
+                                    plan: sessionData.plan
+                                }, '*')
+                            }
+
+                            setStatus('complete')
+                            setMessage('All done! Your notes are now syncing. Closing this window...')
+
+                            // Auto-close after 3 seconds
+                            setTimeout(() => {
+                                window.close()
+                                setTimeout(() => {
+                                    setMessage('Please close this tab and return to the extension.')
+                                }, 500)
+                            }, 3000)
+                            return
                         }
-                        throw new Error('No active session found')
                     }
 
-                    const sessionData = await sessionResponse.json()
-
-                    if (!sessionData.session || !sessionData.user) {
-                        if (attempt < maxRetries) {
-                            continue
-                        }
-                        throw new Error('Invalid session data')
-                    }
-
-                    // ✅ SUCCESS! Session confirmed
-                    setStatus('syncing')
-                    setMessage('Authentication successful! Syncing your notes...')
-
-                    // Notify extension via message if opened from extension
-                    if (window.opener && !window.opener.closed) {
-                        window.opener.postMessage({
-                            type: 'AUTH_SUCCESS',
-                            user: sessionData.user,
-                            session: sessionData.session
-                        }, '*')
-                    }
-
-                    // Wait a moment for sync to initialize
-                    await new Promise(resolve => setTimeout(resolve, 2000))
-
+                    // If Pro status not yet confirmed, show message
                     setStatus('complete')
-                    setMessage('All set! Closing this window...')
-
-                    // Auto-close after 1 second
-                    setTimeout(() => {
-                        window.close()
-
-                        // If close fails, show manual instruction
-                        setTimeout(() => {
-                            setMessage('Please close this tab and return to the extension.')
-                        }, 500)
-                    }, 1000)
-
-                    // Break out of retry loop on success
-                    return
+                    setMessage('Payment processing... Your Pro features will be activated shortly. You can close this window.')
 
                 } catch (error) {
-                    // If this was the last attempt, show error
-                    if (attempt === maxRetries) {
-                        console.error('Auth success handler error:', error)
-                        setStatus('error')
-                        setMessage(
-                            error instanceof Error
-                                ? error.message
-                                : 'Authentication session could not be verified. Please try signing in again.'
-                        )
+                    console.error('Payment verification error:', error)
+                    setStatus('error')
+                    setMessage('Payment received but verification failed. Please refresh the extension.')
+                }
+
+            } else {
+                // ✅ AUTH-ONLY FLOW (No payment yet)
+                // Retry configuration for session verification
+                const maxRetries = 5
+                const initialDelay = 500
+
+                for (let attempt = 0; attempt <= maxRetries; attempt++) {
+                    try {
+                        if (attempt > 0) {
+                            const delay = initialDelay * Math.pow(2, attempt - 1)
+                            setMessage(`Verifying authentication... (attempt ${attempt}/${maxRetries})`)
+                            await new Promise(resolve => setTimeout(resolve, delay))
+                        }
+
+                        const sessionResponse = await fetch('/api/auth/session', {
+                            credentials: 'include',
+                            cache: 'no-store'
+                        })
+
+                        if (!sessionResponse.ok) {
+                            if (attempt < maxRetries) continue
+                            throw new Error('No active session found')
+                        }
+
+                        const sessionData = await sessionResponse.json()
+
+                        if (!sessionData.session || !sessionData.user) {
+                            if (attempt < maxRetries) continue
+                            throw new Error('Invalid session data')
+                        }
+
+                        // ✅ AUTH SUCCESS!
+                        setStatus('complete')
+                        setMessage('Signed in successfully! Redirecting to checkout...')
+
+                        // Notify extension
+                        if (window.opener && !window.opener.closed) {
+                            window.opener.postMessage({
+                                type: 'AUTH_SUCCESS',
+                                user: sessionData.user,
+                                session: sessionData.session
+                            }, '*')
+                        }
+
+                        // Auto-close after 2 seconds
+                        setTimeout(() => {
+                            window.close()
+                            setTimeout(() => {
+                                setMessage('Please close this tab.')
+                            }, 500)
+                        }, 2000)
+
+                        return
+
+                    } catch (error) {
+                        if (attempt === maxRetries) {
+                            console.error('Auth success handler error:', error)
+                            setStatus('error')
+                            setMessage(
+                                error instanceof Error
+                                    ? error.message
+                                    : 'Authentication session could not be verified. Please try signing in again.'
+                            )
+                        }
                     }
-                    // Otherwise, continue to next retry
                 }
             }
         }
 
         handleAuthSuccess()
-    }, [])
+    }, [checkoutId])
 
     return (
         <main className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50 flex items-center justify-center px-4">
@@ -165,5 +209,24 @@ export default function AuthSuccessPage() {
                 )}
             </div>
         </main>
+    )
+}
+
+export default function AuthSuccessPage() {
+    return (
+        <Suspense fallback={
+            <main className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50 flex items-center justify-center px-4">
+                <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
+                    <div className="text-center">
+                        <div className="w-16 h-16 mx-auto bg-blue-100 rounded-full flex items-center justify-center mb-4">
+                            <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                        </div>
+                        <h1 className="text-2xl font-bold text-gray-900">Loading...</h1>
+                    </div>
+                </div>
+            </main>
+        }>
+            <AuthSuccessContent />
+        </Suspense>
     )
 }
