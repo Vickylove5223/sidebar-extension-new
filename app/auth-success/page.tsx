@@ -10,55 +10,87 @@ export default function AuthSuccessPage() {
 
     useEffect(() => {
         const handleAuthSuccess = async () => {
-            try {
-                // 1. Verify session exists
-                const sessionResponse = await fetch('/api/auth/session', {
-                    credentials: 'include'
-                })
+            // Retry configuration
+            const maxRetries = 5
+            const initialDelay = 500 // Start with 500ms
 
-                if (!sessionResponse.ok) {
-                    throw new Error('No active session found')
-                }
+            for (let attempt = 0; attempt <= maxRetries; attempt++) {
+                try {
+                    // Wait before checking (exponential backoff)
+                    if (attempt > 0) {
+                        const delay = initialDelay * Math.pow(2, attempt - 1)
+                        setMessage(`Verifying authentication... (attempt ${attempt}/${maxRetries})`)
+                        await new Promise(resolve => setTimeout(resolve, delay))
+                    }
 
-                const sessionData = await sessionResponse.json()
+                    // Check session
+                    const sessionResponse = await fetch('/api/auth/session', {
+                        credentials: 'include',
+                        cache: 'no-store' // Force fresh request
+                    })
 
-                if (!sessionData.session || !sessionData.user) {
-                    throw new Error('Invalid session data')
-                }
+                    if (!sessionResponse.ok) {
+                        // If not last attempt, retry
+                        if (attempt < maxRetries) {
+                            continue
+                        }
+                        throw new Error('No active session found')
+                    }
 
-                setStatus('syncing')
-                setMessage('Authentication successful! Syncing your notes...')
+                    const sessionData = await sessionResponse.json()
 
-                // 2. Notify extension via message if opened from extension
-                if (window.opener && !window.opener.closed) {
-                    window.opener.postMessage({
-                        type: 'AUTH_SUCCESS',
-                        user: sessionData.user,
-                        session: sessionData.session
-                    }, '*')
-                }
+                    if (!sessionData.session || !sessionData.user) {
+                        if (attempt < maxRetries) {
+                            continue
+                        }
+                        throw new Error('Invalid session data')
+                    }
 
-                // 3. Wait a moment for sync to initialize
-                await new Promise(resolve => setTimeout(resolve, 2000))
+                    // ✅ SUCCESS! Session confirmed
+                    setStatus('syncing')
+                    setMessage('Authentication successful! Syncing your notes...')
 
-                setStatus('complete')
-                setMessage('All set! Closing this window...')
+                    // Notify extension via message if opened from extension
+                    if (window.opener && !window.opener.closed) {
+                        window.opener.postMessage({
+                            type: 'AUTH_SUCCESS',
+                            user: sessionData.user,
+                            session: sessionData.session
+                        }, '*')
+                    }
 
-                // 4. Auto-close after 1 second
-                setTimeout(() => {
-                    // Try to close the window
-                    window.close()
+                    // Wait a moment for sync to initialize
+                    await new Promise(resolve => setTimeout(resolve, 2000))
 
-                    // If close fails (popup blockers), show manual instruction
+                    setStatus('complete')
+                    setMessage('All set! Closing this window...')
+
+                    // Auto-close after 1 second
                     setTimeout(() => {
-                        setMessage('Please close this tab and return to the extension.')
-                    }, 500)
-                }, 1000)
+                        window.close()
 
-            } catch (error) {
-                console.error('Auth success handler error:', error)
-                setStatus('error')
-                setMessage(error instanceof Error ? error.message : 'An error occurred during authentication')
+                        // If close fails, show manual instruction
+                        setTimeout(() => {
+                            setMessage('Please close this tab and return to the extension.')
+                        }, 500)
+                    }, 1000)
+
+                    // Break out of retry loop on success
+                    return
+
+                } catch (error) {
+                    // If this was the last attempt, show error
+                    if (attempt === maxRetries) {
+                        console.error('Auth success handler error:', error)
+                        setStatus('error')
+                        setMessage(
+                            error instanceof Error
+                                ? error.message
+                                : 'Authentication session could not be verified. Please try signing in again.'
+                        )
+                    }
+                    // Otherwise, continue to next retry
+                }
             }
         }
 
