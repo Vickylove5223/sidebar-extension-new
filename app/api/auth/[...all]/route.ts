@@ -1,10 +1,18 @@
-import { auth } from "@/lib/auth"
 import { toNextJsHandler } from "better-auth/next-js"
 
-const handler = toNextJsHandler(auth);
+// ✅ Force dynamic - prevents static generation
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
+// ✅ Lazy load auth to prevent build-time initialization
+const getHandler = async () => {
+    const { auth } = await import("@/lib/auth");
+    return toNextJsHandler(auth);
+};
 
 export async function GET(request: Request) {
     try {
+        const handler = await getHandler();
         return await handler.GET(request);
     } catch (error: unknown) {
         console.error('[Auth] GET Error:', error);
@@ -21,6 +29,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
     try {
+        const handler = await getHandler();
         return await handler.POST(request);
     } catch (error: unknown) {
         console.error('[Auth] POST Error:', error);
@@ -34,3 +43,4 @@ export async function POST(request: Request) {
         });
     }
 }
+

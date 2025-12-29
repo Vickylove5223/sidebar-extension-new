@@ -1,16 +1,33 @@
 import { betterAuth } from "better-auth"
-import { Pool } from "@neondatabase/serverless"
+import { neon } from "@neondatabase/serverless"
 
-// ✅ Create Neon serverless pool - this handles channel_binding properly
-const pool = new Pool({ connectionString: process.env.DATABASE_URL! })
+// ✅ Validate environment variables at startup
+if (!process.env.DATABASE_URL) {
+    console.error('[Auth] ❌ DATABASE_URL is not set');
+}
+if (!process.env.BETTER_AUTH_SECRET) {
+    console.error('[Auth] ❌ BETTER_AUTH_SECRET is not set');
+}
+if (!process.env.GOOGLE_CLIENT_ID) {
+    console.error('[Auth] ❌ GOOGLE_CLIENT_ID is not set');
+}
+if (!process.env.GOOGLE_CLIENT_SECRET) {
+    console.error('[Auth] ❌ GOOGLE_CLIENT_SECRET is not set');
+}
+
+// ✅ Create Neon HTTP client - better for serverless
+const sql = neon(process.env.DATABASE_URL!);
 
 export const auth = betterAuth({
     // ✅ Base configuration
     baseURL: process.env.BETTER_AUTH_URL || "https://sidebar-notepads.vercel.app",
     secret: process.env.BETTER_AUTH_SECRET!,
 
-    // ✅ Database - Using pg adapter with Neon serverless pool
-    database: pool,
+    // ✅ Database - Using neon HTTP driver (serverless optimized)
+    database: {
+        provider: "pg",
+        url: process.env.DATABASE_URL!
+    },
 
     // ✅ Session configuration
     session: {
@@ -34,7 +51,7 @@ export const auth = betterAuth({
             clientId: process.env.GOOGLE_CLIENT_ID!,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
             accessType: "offline",
-            prompt: "consent", // For testing - remove later
+            prompt: "consent",
             scopes: [
                 "openid",
                 "profile",
@@ -49,8 +66,11 @@ export const auth = betterAuth({
         crossSubDomainCookies: {
             enabled: true
         },
-        crossSiteCookies: true, // ✅ CRITICAL: Allow extension to send cookies
+        crossSiteCookies: true,
         useSecureCookies: process.env.NODE_ENV === "production"
     }
 })
+
+console.log('[Auth] ✅ Better Auth initialized successfully');
+
 
