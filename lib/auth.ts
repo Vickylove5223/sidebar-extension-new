@@ -1,15 +1,16 @@
 import { betterAuth } from "better-auth"
+import { Pool } from "@neondatabase/serverless"
+
+// ✅ Create Neon serverless pool - this handles channel_binding properly
+const pool = new Pool({ connectionString: process.env.DATABASE_URL! })
 
 export const auth = betterAuth({
     // ✅ Base configuration
     baseURL: process.env.BETTER_AUTH_URL || "https://sidebar-notepads.vercel.app",
     secret: process.env.BETTER_AUTH_SECRET!,
 
-    // ✅ Database (Vercel Postgres for production)
-    database: {
-        provider: "postgres",
-        url: process.env.DATABASE_URL!
-    },
+    // ✅ Database - Using pg adapter with Neon serverless pool
+    database: pool,
 
     // ✅ Session configuration
     session: {
@@ -52,3 +53,4 @@ export const auth = betterAuth({
         useSecureCookies: process.env.NODE_ENV === "production"
     }
 })
+
