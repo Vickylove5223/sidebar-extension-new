@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { db } from "@/lib/db";
-import { eq } from "drizzle-orm";
-import * as schema from "@/lib/schema";
+import { Polar } from "@polar-sh/sdk";
+
+// Initialize Polar SDK client
+const polarClient = new Polar({
+    accessToken: process.env.POLAR_ACCESS_TOKEN!,
+    server: process.env.NODE_ENV === 'production' ? 'production' : 'sandbox'
+});
 
 /**
  * GET /api/auth/session-status
@@ -22,30 +26,71 @@ export async function GET(request: Request) {
             });
         }
 
-        // Check if user has Pro via Polar
-        // Polar Better Auth plugin automatically creates/updates customer records
-        // We need to query the user's accounts to check for Polar connection
-        const userAccounts = await db.query.account.findMany({
-            where: eq(schema.account.userId, session.user.id)
-        });
-
-        // Check if user has active Polar subscription/purchase
-        // The Polar plugin stores this info in the account metadata
-        const polarAccount = userAccounts.find(acc => acc.providerId === 'polar');
-        const hasPro = polarAccount?.metadata?.hasPro || false;
-        const plan = polarAccount?.metadata?.plan || null;
-
-        return NextResponse.json({
-            authenticated: true,
-            hasPro,
-            plan,
-            user: {
-                id: session.user.id,
+        // Check if user has Pro via Polar SDK
+        // Look up customer by email
+        try {
+            const customersResponse = await polarClient.customers.list({
                 email: session.user.email,
-                name: session.user.name,
-                image: session.user.image
+                limit: 1
+            });
+
+            const customer = customersResponse.result?.items?.[0];
+
+            if (!customer) {
+                // No Polar customer found - free user
+                return NextResponse.json({
+                    authenticated: true,
+                    hasPro: false,
+                    plan: null,
+                    user: {
+                        id: session.user.id,
+                        email: session.user.email,
+                        name: session.user.name,
+                        image: session.user.image
+                    }
+                });
             }
-        });
+
+            // Check for active subscriptions or lifetime purchases
+            const hasActiveSubscription = customer.subscriptions && customer.subscriptions.length > 0;
+            const hasLifetimePurchase = customer.purchases && customer.purchases.length > 0;
+            const hasPro = hasActiveSubscription || hasLifetimePurchase;
+
+            // Determine plan type
+            let plan = null;
+            if (hasActiveSubscription) {
+                plan = 'pro_yearly'; // Subscription = yearly plan
+            } else if (hasLifetimePurchase) {
+                plan = 'pro_lifetime'; // One-time purchase = lifetime
+            }
+
+            return NextResponse.json({
+                authenticated: true,
+                hasPro,
+                plan,
+                user: {
+                    id: session.user.id,
+                    email: session.user.email,
+                    name: session.user.name,
+                    image: session.user.image
+                }
+            });
+
+        } catch (polarError) {
+            console.error('[Session Status] Polar API error:', polarError);
+            // If Polar API fails, assume free user but don't block
+            return NextResponse.json({
+                authenticated: true,
+                hasPro: false,
+                plan: null,
+                user: {
+                    id: session.user.id,
+                    email: session.user.email,
+                    name: session.user.name,
+                    image: session.user.image
+                }
+            });
+        }
 
     } catch (error) {
         console.error('[Session Status] Error:', error);
