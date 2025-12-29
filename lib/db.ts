@@ -1,18 +1,9 @@
-import { config } from "dotenv";
 import { drizzle } from 'drizzle-orm/neon-http';
 import { neon } from '@neondatabase/serverless';
 
-config({ path: ".env" });
-
-// ✅ Handle build time when DATABASE_URL is not available
-const getDrizzle = () => {
-    if (!process.env.DATABASE_URL) {
-        // During build, return a mock that won't be used
-        console.warn('[DB] DATABASE_URL not set - using placeholder for build');
-        return null;
-    }
-    const sql = neon(process.env.DATABASE_URL);
-    return drizzle(sql);
-};
-
-export const db = getDrizzle()!;
+// ✅ Simpler approach: Just use process.env.DATABASE_URL
+// On Vercel, this is always available at runtime.
+// During build, if it's missing, we let it fail or handle it at the call site depending on usage.
+// But for Better Auth adapter, it needs a valid db instance.
+// We use ! assertion because we know it exists in production.
+export const db = drizzle(neon(process.env.DATABASE_URL!));
