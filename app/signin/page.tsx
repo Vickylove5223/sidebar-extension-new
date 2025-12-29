@@ -7,6 +7,7 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_BETTER_AUTH_URL || 'https://sidebar-
 
 export default function SignInPage() {
     const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+    const [message, setMessage] = useState('')
 
     const handleSignIn = async () => {
         setStatus('loading')
