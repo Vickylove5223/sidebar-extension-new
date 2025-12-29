@@ -1,17 +1,18 @@
-import { neon } from '@neondatabase/serverless';
+import { config } from "dotenv";
 import { drizzle } from 'drizzle-orm/neon-http';
+import { neon } from '@neondatabase/serverless';
 
-// ✅ Create database connection
-// During build, DATABASE_URL might not be set - that's okay, it will be set at runtime
-function createDb() {
+config({ path: ".env" });
+
+// ✅ Handle build time when DATABASE_URL is not available
+const getDrizzle = () => {
     if (!process.env.DATABASE_URL) {
-        console.warn('[DB] DATABASE_URL not set');
+        // During build, return a mock that won't be used
+        console.warn('[DB] DATABASE_URL not set - using placeholder for build');
         return null;
     }
     const sql = neon(process.env.DATABASE_URL);
     return drizzle(sql);
-}
+};
 
-// Create the db instance
-// It's okay if this is null during build - it will work at runtime
-export const db = createDb()!;
+export const db = getDrizzle()!;
