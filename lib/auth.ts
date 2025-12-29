@@ -6,9 +6,9 @@ import { nextCookies } from "better-auth/next-js";
 
 export const auth = betterAuth({
     // Explicitly set baseURL matching user guide advice
-    baseURL: process.env.BETTER_AUTH_URL || "https://sidebar-notepads.vercel.app",
+    baseURL: process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || "https://sidebar-notepads.vercel.app",
     trustedOrigins: [
-        process.env.BETTER_AUTH_URL || "https://sidebar-notepads.vercel.app",
+        process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || "https://sidebar-notepads.vercel.app",
         "chrome-extension://ghlieciaoaeoecmofbfeifkmlbolamfh",
     ],
     database: drizzleAdapter(db, {

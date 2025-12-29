@@ -1,20 +1,23 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { signIn } from "@/lib/auth-client"
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BETTER_AUTH_URL || 'https://sidebar-notepads.vercel.app'
 
 export default function SignInPage() {
     const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
-    const [message, setMessage] = useState('')
 
     const handleSignIn = async () => {
         setStatus('loading')
         setMessage('Redirecting to Google...')
 
         try {
-            // Redirect to Better Auth Google sign-in
-            window.location.href = `${BACKEND_URL}/api/auth/signin/google`
+            await signIn.social({
+                provider: "google",
+                callbackURL: "/dashboard" // Or handle success via popup if client configured
+            });
+            // Note: signIn.social redirects by default, so below code might not be reached immediately
         } catch (error) {
             setStatus('error')
             setMessage('Failed to start sign-in. Please try again.')
