@@ -26,6 +26,14 @@ export const auth = betterAuth({
             ? process.env.ALLOWED_EXTENSION_IDS.split(",").map((id) => `chrome-extension://${id.trim()}`)
             : []),
     ],
+    // ✅ FIX: Advanced cookie settings to prevent state_mismatch errors
+    // SameSite=none is required for OAuth POST redirects to work correctly
+    advanced: {
+        crossSubDomainCookies: {
+            enabled: true,
+        },
+        cookiePrefix: "sidebar_auth",
+    },
     database: drizzleAdapter(db, {
         provider: "pg",
         schema: {

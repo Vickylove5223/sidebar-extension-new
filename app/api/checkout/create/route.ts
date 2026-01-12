@@ -5,13 +5,14 @@ import { Polar } from "@polar-sh/sdk";
 // Initialize Polar SDK client
 const polarClient = new Polar({
     accessToken: process.env.POLAR_ACCESS_TOKEN!,
-    server: process.env.POLAR_SANDBOX === 'true' ? 'sandbox' : 'production'
+    // Match auth.ts: Use sandbox in development, production for live
+    server: process.env.NODE_ENV === 'production' ? 'production' : 'sandbox'
 });
 
-// Product IDs mapping
+// Product IDs mapping - use both naming conventions for compatibility
 const PRODUCT_IDS: Record<string, string> = {
-    pro_yearly: process.env.POLAR_PRODUCT_YEARLY || '4678413a-4109-48c6-9d72-fe842b255e4b',
-    pro_lifetime: process.env.POLAR_PRODUCT_LIFETIME || '873fe78c-55d0-4de0-919f-4cbe5ffc9f10'
+    pro_yearly: process.env.POLAR_YEARLY_PLAN_ID || process.env.POLAR_PRODUCT_YEARLY || '4678413a-4109-48c6-9d72-fe842b255e4b',
+    pro_lifetime: process.env.POLAR_LIFETIME_PLAN_ID || process.env.POLAR_PRODUCT_LIFETIME || '873fe78c-55d0-4de0-919f-4cbe5ffc9f10'
 };
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BETTER_AUTH_URL || 'https://sidebar-notepads.vercel.app';
@@ -68,8 +69,19 @@ export async function POST(request: Request) {
 
     } catch (error) {
         console.error('[Checkout] Error creating checkout:', error);
+
+        // Extract error details for debugging
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        const errorDetails = error instanceof Error && 'cause' in error ? error.cause : undefined;
+
+        console.error('[Checkout] Error details:', {
+            message: errorMessage,
+            details: errorDetails,
+            stack: error instanceof Error ? error.stack : undefined
+        });
+
         return NextResponse.json(
-            { error: 'Failed to create checkout' },
+            { error: `Failed to create checkout: ${errorMessage}` },
             { status: 500 }
         );
     }

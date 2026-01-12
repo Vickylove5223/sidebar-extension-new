@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { Polar } from "@polar-sh/sdk";
 
+// Force dynamic rendering (uses request.headers for auth)
+export const dynamic = 'force-dynamic';
+
 // Initialize Polar SDK client
 const polarClient = new Polar({
     accessToken: process.env.POLAR_ACCESS_TOKEN!,

@@ -76,6 +76,7 @@ export default function SignInPage() {
     }
 
     const handleSignIn = async () => {
+        console.log('[SignIn] handleSignIn called');
         setStatus('loading')
         setMessage('Redirecting to Google...')
 
@@ -92,13 +93,23 @@ export default function SignInPage() {
                 ? `/signin?success=true&plan=${pendingPlan}`
                 : '/signin?success=true'
 
-            await signIn.social({
+            console.log('[SignIn] Calling signIn.social with callbackURL:', callbackUrl);
+
+            const result = await signIn.social({
                 provider: "google",
                 callbackURL: callbackUrl
             });
+
+            console.log('[SignIn] signIn.social result:', result);
+
+            // If we get here without redirect, something went wrong
+            if (result?.error) {
+                throw new Error(result.error.message || 'Sign-in failed');
+            }
         } catch (error) {
+            console.error('[SignIn] Error:', error);
             setStatus('error')
-            setMessage('Failed to start sign-in. Please try again.')
+            setMessage(error instanceof Error ? error.message : 'Failed to start sign-in. Please try again.')
         }
     }
 

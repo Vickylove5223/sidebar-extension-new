@@ -5,7 +5,11 @@ import { account } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { Polar } from "@polar-sh/sdk";
 
+// Force dynamic rendering (uses request.headers for auth)
+export const dynamic = 'force-dynamic';
+
 // Initialize Polar SDK client
+
 const polarClient = new Polar({
     accessToken: process.env.POLAR_ACCESS_TOKEN!,
     server: process.env.NODE_ENV === 'production' ? 'production' : 'sandbox'
