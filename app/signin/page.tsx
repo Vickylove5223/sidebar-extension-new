@@ -5,41 +5,95 @@ import { signIn } from "@/lib/auth-client"
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BETTER_AUTH_URL || 'https://sidebar-notepads.vercel.app'
 
+// Polar product IDs (should match your Polar dashboard)
+const POLAR_PRODUCTS = {
+    pro_yearly: process.env.NEXT_PUBLIC_POLAR_PRODUCT_YEARLY || '4678413a-4109-48c6-9d72-fe842b255e4b',
+    pro_lifetime: process.env.NEXT_PUBLIC_POLAR_PRODUCT_LIFETIME || '873fe78c-55d0-4de0-919f-4cbe5ffc9f10'
+}
+
 export default function SignInPage() {
     const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
     const [message, setMessage] = useState('')
+    const [pendingPlan, setPendingPlan] = useState<string | null>(null)
+
+    // Check for plan parameter on load
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search)
+        const plan = urlParams.get('plan')
+        const success = urlParams.get('success')
+        const error = urlParams.get('error')
+
+        if (plan) {
+            setPendingPlan(plan)
+            console.log('[SignIn] Plan parameter detected:', plan)
+        }
+
+        if (success === 'true') {
+            setStatus('success')
+            setMessage('Connected successfully! Redirecting to checkout...')
+
+            // If there's a pending plan, create checkout
+            if (plan) {
+                createCheckoutAndRedirect(plan)
+            } else {
+                setMessage('Connected successfully! You can now close this window.')
+            }
+        } else if (error) {
+            setStatus('error')
+            setMessage(`Sign-in failed: ${error}`)
+        }
+    }, [])
+
+    const createCheckoutAndRedirect = async (plan: string) => {
+        try {
+            setMessage('Creating checkout session...')
+
+            // Call our API to create a Polar checkout
+            const response = await fetch('/api/checkout/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ plan })
+            })
+
+            if (!response.ok) {
+                throw new Error('Failed to create checkout')
+            }
+
+            const data = await response.json()
+
+            if (data.checkoutUrl) {
+                setMessage('Redirecting to payment...')
+                window.location.href = data.checkoutUrl
+            } else {
+                throw new Error('No checkout URL returned')
+            }
+        } catch (error) {
+            console.error('[SignIn] Checkout error:', error)
+            setStatus('error')
+            setMessage('Failed to create checkout. Please try again.')
+        }
+    }
 
     const handleSignIn = async () => {
         setStatus('loading')
         setMessage('Redirecting to Google...')
 
         try {
+            // Include plan in callback URL if present
+            const callbackUrl = pendingPlan
+                ? `/signin?success=true&plan=${pendingPlan}`
+                : '/signin?success=true'
+
             await signIn.social({
-                provider: "google"
-                // ✅ No callbackURL - Better Auth will redirect to "/" after setting cookies
-                // This ensures the session cookie is fully propagated before redirect
+                provider: "google",
+                callbackURL: callbackUrl
             });
-            // Note: signIn.social redirects by default, so below code might not be reached immediately
         } catch (error) {
             setStatus('error')
             setMessage('Failed to start sign-in. Please try again.')
         }
     }
-
-    // Check for callback parameters (after OAuth redirect)
-    useEffect(() => {
-        const urlParams = new URLSearchParams(window.location.search)
-        const success = urlParams.get('success')
-        const error = urlParams.get('error')
-
-        if (success === 'true') {
-            setStatus('success')
-            setMessage('Connected successfully! You can now close this window and return to the extension.')
-        } else if (error) {
-            setStatus('error')
-            setMessage(`Sign-in failed: ${error}`)
-        }
-    }, [])
 
     return (
         <main className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 flex items-center justify-center px-4">
@@ -52,8 +106,23 @@ export default function SignInPage() {
                         </svg>
                     </div>
                     <h1 className="text-2xl font-bold text-gray-900">Sidebar Notepads PRO</h1>
-                    <p className="text-gray-600 mt-2">Connect your Google account to sync notes</p>
+                    <p className="text-gray-600 mt-2">
+                        {pendingPlan
+                            ? 'Sign in with Google to complete your purchase'
+                            : 'Connect your Google account to sync notes'}
+                    </p>
                 </div>
+
+                {/* Plan Badge */}
+                {pendingPlan && status !== 'success' && (
+                    <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 mb-6">
+                        <div className="flex items-center justify-center">
+                            <span className="text-indigo-800 font-medium">
+                                {pendingPlan === 'pro_yearly' ? '📅 Annual Plan - $5/year' : '🎁 Lifetime Plan - $18 one-time'}
+                            </span>
+                        </div>
+                    </div>
+                )}
 
                 {/* Status Messages */}
                 {status === 'success' && (
@@ -111,3 +180,4 @@ export default function SignInPage() {
         </main>
     )
 }
+

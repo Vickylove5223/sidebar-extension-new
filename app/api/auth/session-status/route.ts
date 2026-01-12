@@ -52,7 +52,10 @@ export async function GET(request: Request) {
             }
 
             // Check for active subscriptions or lifetime purchases
-            const hasActiveSubscription = customer.subscriptions && customer.subscriptions.length > 0;
+            // ✅ FIX: Properly verify subscription status is 'active', not just that subscriptions exist
+            const hasActiveSubscription = customer.subscriptions?.some(
+                (sub: { status?: string }) => sub.status === 'active'
+            ) || false;
             const hasLifetimePurchase = customer.purchases && customer.purchases.length > 0;
             const hasPro = hasActiveSubscription || hasLifetimePurchase;
 
