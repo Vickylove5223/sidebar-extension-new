@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { Polar } from "@polar-sh/sdk";
+import { auth } from "@/lib/auth";
 
 // Initialize Polar SDK client
 const polarClient = new Polar({
@@ -8,27 +9,29 @@ const polarClient = new Polar({
 });
 
 /**
- * GET /api/check-pro-status?email=xxx
+ * GET /api/check-pro-status
  * 
- * Public endpoint that checks if a user has Pro status via Polar.
- * Used by the extension to verify payment status without requiring session cookies.
+ * Checks if a user has Pro status via Polar.
  * 
- * Note: This endpoint is intentionally unauthenticated to allow the extension to check
- * status without complex session management. It only returns boolean status, no sensitive data.
+ * SECURITY UPDATE:
+ * - Now requires authentication via Better Auth session
+ * - Removed email query parameter to prevent privacy leaks
+ * - Returns boolean status only
  */
 export async function GET(request: Request) {
     try {
-        const { searchParams } = new URL(request.url);
-        const email = searchParams.get('email');
+        // Enforce authentication
+        const session = await auth.api.getSession({ headers: request.headers });
 
-        if (!email) {
+        if (!session || !session.user || !session.user.email) {
             return NextResponse.json(
-                { error: 'Email is required' },
-                { status: 400 }
+                { error: 'Authentication required' },
+                { status: 401 }
             );
         }
 
-        console.log('[CheckProStatus] Checking Pro status for:', email);
+        const email = session.user.email;
+        console.log('[CheckProStatus] Checking Pro status for authenticated user:', email);
 
         // Look up customer by email via Polar SDK
         try {
@@ -41,7 +44,6 @@ export async function GET(request: Request) {
 
             if (!customer) {
                 // No Polar customer found - free user
-                console.log('[CheckProStatus] No customer found for:', email);
                 return NextResponse.json({
                     hasPro: false,
                     plan: null
@@ -73,7 +75,7 @@ export async function GET(request: Request) {
         } catch (polarError) {
             console.error('[CheckProStatus] Polar API error:', polarError);
             return NextResponse.json(
-                { error: 'Failed to check status' },
+                { error: 'Failed to verify status' },
                 { status: 500 }
             );
         }

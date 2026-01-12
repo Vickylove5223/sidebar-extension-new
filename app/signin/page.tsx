@@ -80,6 +80,13 @@ export default function SignInPage() {
         setMessage('Redirecting to Google...')
 
         try {
+            // Store pending plan in localStorage before OAuth redirect
+            // This persists through the OAuth flow since callbackURL alone isn't reliable
+            if (pendingPlan) {
+                localStorage.setItem('pending_checkout_plan', pendingPlan);
+                console.log('[SignIn] Stored pending plan in localStorage:', pendingPlan);
+            }
+
             // Include plan in callback URL if present
             const callbackUrl = pendingPlan
                 ? `/signin?success=true&plan=${pendingPlan}`

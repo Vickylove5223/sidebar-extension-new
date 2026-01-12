@@ -84,7 +84,7 @@ export const auth = betterAuth({
                         console.log('[Polar] Order paid:', {
                             orderId: payload.data.id,
                             customerId: payload.data.customerId,
-                            amount: payload.data.amount
+                            amount: payload.data.totalAmount
                         });
                         // Polar automatically updates customer state
                         // Extension will poll session-status to detect Pro upgrade

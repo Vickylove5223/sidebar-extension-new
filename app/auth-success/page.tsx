@@ -101,8 +101,68 @@ function AuthSuccessContent() {
                         }
 
                         // ✅ AUTH SUCCESS!
+                        console.log('[AuthSuccess] Session verified successfully');
+
+                        // Check for pending checkout plan stored before OAuth
+                        const pendingPlan = localStorage.getItem('pending_checkout_plan');
+                        console.log('[AuthSuccess] Pending plan from localStorage:', pendingPlan);
+
+                        if (pendingPlan) {
+                            // User came from pricing flow - redirect to checkout
+                            setStatus('syncing')
+                            setMessage('Creating checkout session...')
+                            localStorage.removeItem('pending_checkout_plan');
+
+                            try {
+                                // Create checkout session
+                                const checkoutResponse = await fetch('/api/checkout/create', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    credentials: 'include',
+                                    body: JSON.stringify({ plan: pendingPlan })
+                                });
+
+                                if (checkoutResponse.ok) {
+                                    const checkoutData = await checkoutResponse.json();
+
+                                    if (checkoutData.checkoutUrl) {
+                                        setStatus('complete')
+                                        setMessage('Redirecting to payment...')
+
+                                        // Notify extension that auth was successful (will complete payment flow)
+                                        if (window.opener && !window.opener.closed) {
+                                            window.opener.postMessage({
+                                                type: 'AUTH_SUCCESS',
+                                                user: sessionData.user,
+                                                session: sessionData.session,
+                                                redirectingToCheckout: true
+                                            }, '*')
+                                        }
+
+                                        // Redirect to Polar checkout
+                                        setTimeout(() => {
+                                            window.location.href = checkoutData.checkoutUrl;
+                                        }, 1000);
+                                        return;
+                                    }
+                                }
+
+                                // Checkout creation failed - fallback to normal flow
+                                console.error('[AuthSuccess] Failed to create checkout');
+                                setStatus('error')
+                                setMessage('Failed to create checkout. Please try upgrading from the extension.');
+
+                            } catch (checkoutError) {
+                                console.error('[AuthSuccess] Checkout error:', checkoutError);
+                                setStatus('error')
+                                setMessage('Error creating checkout. Please try again from the extension.');
+                            }
+                            return;
+                        }
+
+                        // No pending plan - regular auth flow (just notify extension)
                         setStatus('complete')
-                        setMessage('Signed in successfully! Redirecting to checkout...')
+                        setMessage('Signed in successfully!')
 
                         // Notify extension
                         if (window.opener && !window.opener.closed) {
