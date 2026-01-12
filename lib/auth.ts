@@ -79,7 +79,7 @@ export const auth = betterAuth({
                     onOrderPaid: async (payload) => {
                         console.log('[Polar] Order paid:', {
                             orderId: payload.data.id,
-                            customerId: payload.data.customer_id,
+                            customerId: payload.data.customerId,
                             amount: payload.data.amount
                         });
                         // Polar automatically updates customer state
@@ -89,14 +89,14 @@ export const auth = betterAuth({
                     onSubscriptionActive: async (payload) => {
                         console.log('[Polar] Subscription activated:', {
                             subscriptionId: payload.data.id,
-                            customerId: payload.data.customer_id
+                            customerId: payload.data.customerId
                         });
                     },
                     // Handle subscription cancellation
                     onSubscriptionCanceled: async (payload) => {
                         console.log('[Polar] Subscription canceled:', {
                             subscriptionId: payload.data.id,
-                            customerId: payload.data.customer_id
+                            customerId: payload.data.customerId
                         });
                     },
                     // Catch-all for debugging
