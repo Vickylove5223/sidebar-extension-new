@@ -56,7 +56,7 @@ export async function GET(request: Request) {
             const hasActiveSubscription = (customer as any).subscriptions?.some(
                 (sub: { status?: string }) => sub.status === 'active'
             ) || false;
-            const hasLifetimePurchase = customer.purchases && customer.purchases.length > 0;
+            const hasLifetimePurchase = (customer as any).purchases && (customer as any).purchases.length > 0;
             const hasPro = hasActiveSubscription || hasLifetimePurchase;
 
             // Determine plan type

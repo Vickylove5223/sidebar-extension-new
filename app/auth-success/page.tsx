@@ -142,25 +142,25 @@ function AuthSuccessContent() {
     }, [checkoutId])
 
     return (
-        <main className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50 flex items-center justify-center px-4">
-            <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
+        <main className="min-h-screen bg-[#FAFAFA] flex items-center justify-center px-4">
+            <div className="max-w-md w-full bg-white rounded-[24px] shadow-[0_20px_60px_rgba(0,0,0,0.1)] border border-black/10 p-8">
                 {/* Success Icon */}
                 <div className="text-center mb-6">
                     {status === 'checking' && (
-                        <div className="w-16 h-16 mx-auto bg-blue-100 rounded-full flex items-center justify-center mb-4">
-                            <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                        <div className="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                            <div className="w-8 h-8 border-4 border-gray-300 border-t-black rounded-full animate-spin" />
                         </div>
                     )}
                     {status === 'syncing' && (
-                        <div className="w-16 h-16 mx-auto bg-indigo-100 rounded-full flex items-center justify-center mb-4">
-                            <svg className="w-8 h-8 text-indigo-600 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="w-16 h-16 mx-auto bg-[#ECFF71]/20 rounded-full flex items-center justify-center mb-4">
+                            <svg className="w-8 h-8 text-black animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                             </svg>
                         </div>
                     )}
                     {status === 'complete' && (
-                        <div className="w-16 h-16 mx-auto bg-green-100 rounded-full flex items-center justify-center mb-4">
-                            <svg className="w-8 h-8 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                        <div className="w-16 h-16 mx-auto bg-[#ECFF71] rounded-full flex items-center justify-center mb-4 shadow-lg">
+                            <svg className="w-8 h-8 text-black" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                             </svg>
                         </div>
@@ -173,19 +173,19 @@ function AuthSuccessContent() {
                         </div>
                     )}
 
-                    <h1 className="text-2xl font-bold text-gray-900">
+                    <h1 className="text-2xl font-bold text-black" style={{ fontWeight: 800 }}>
                         {status === 'checking' && 'Verifying...'}
                         {status === 'syncing' && 'Syncing Notes'}
                         {status === 'complete' && 'Success!'}
                         {status === 'error' && 'Error'}
                     </h1>
-                    <p className="text-gray-600 mt-2">{message}</p>
+                    <p className="text-[#666666] mt-2">{message}</p>
                 </div>
 
                 {/* Progress Indicator */}
                 {(status === 'checking' || status === 'syncing') && (
-                    <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
-                        <div className="bg-indigo-600 h-2 rounded-full animate-pulse" style={{ width: status === 'checking' ? '33%' : '66%' }} />
+                    <div className="w-full bg-gray-100 rounded-full h-2 mb-4">
+                        <div className="bg-black h-2 rounded-full animate-pulse" style={{ width: status === 'checking' ? '33%' : '66%' }} />
                     </div>
                 )}
 
@@ -193,7 +193,7 @@ function AuthSuccessContent() {
                 {status === 'complete' && (
                     <button
                         onClick={() => window.close()}
-                        className="w-full mt-4 bg-indigo-600 text-white rounded-xl py-3 px-6 font-semibold hover:bg-indigo-700 transition-all"
+                        className="w-full mt-4 bg-black text-white rounded-xl py-3 px-6 font-semibold hover:bg-[#333] transition-all shadow-lg"
                     >
                         Close Window
                     </button>
@@ -202,7 +202,7 @@ function AuthSuccessContent() {
                 {status === 'error' && (
                     <button
                         onClick={() => router.push('/signin')}
-                        className="w-full mt-4 bg-red-600 text-white rounded-xl py-3 px-6 font-semibold hover:bg-red-700 transition-all"
+                        className="w-full mt-4 bg-black text-white rounded-xl py-3 px-6 font-semibold hover:bg-[#333] transition-all"
                     >
                         Try Again
                     </button>
@@ -215,13 +215,13 @@ function AuthSuccessContent() {
 export default function AuthSuccessPage() {
     return (
         <Suspense fallback={
-            <main className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50 flex items-center justify-center px-4">
-                <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
+            <main className="min-h-screen bg-[#FAFAFA] flex items-center justify-center px-4">
+                <div className="max-w-md w-full bg-white rounded-[24px] shadow-[0_20px_60px_rgba(0,0,0,0.1)] border border-black/10 p-8">
                     <div className="text-center">
-                        <div className="w-16 h-16 mx-auto bg-blue-100 rounded-full flex items-center justify-center mb-4">
-                            <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                        <div className="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                            <div className="w-8 h-8 border-4 border-gray-300 border-t-black rounded-full animate-spin" />
                         </div>
-                        <h1 className="text-2xl font-bold text-gray-900">Loading...</h1>
+                        <h1 className="text-2xl font-bold text-black" style={{ fontWeight: 800 }}>Loading...</h1>
                     </div>
                 </div>
             </main>
