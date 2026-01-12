@@ -21,6 +21,10 @@ export const auth = betterAuth({
     trustedOrigins: [
         process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || "https://sidebar-notepads.vercel.app",
         "chrome-extension://ghlieciaoaeoecmofbfeifkmlbolamfh",
+        // Allow additional extensions via env var (e.g. widely used for local dev)
+        ...(process.env.ALLOWED_EXTENSION_IDS
+            ? process.env.ALLOWED_EXTENSION_IDS.split(",").map((id) => `chrome-extension://${id.trim()}`)
+            : []),
     ],
     database: drizzleAdapter(db, {
         provider: "pg",
