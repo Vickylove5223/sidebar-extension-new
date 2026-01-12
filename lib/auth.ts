@@ -6,11 +6,14 @@ import { nextCookies } from "better-auth/next-js";
 import { polar, checkout, webhooks } from "@polar-sh/better-auth";
 import { Polar } from "@polar-sh/sdk";
 
+// Determine Polar environment - use explicit POLAR_SANDBOX env var
+// On Vercel, NODE_ENV is always 'production', so we need an explicit flag
+const useSandbox = process.env.POLAR_SANDBOX === 'true';
+
 // Initialize Polar SDK client
 const polarClient = new Polar({
     accessToken: process.env.POLAR_ACCESS_TOKEN!,
-    // Use sandbox for development, production for live
-    server: process.env.NODE_ENV === 'production' ? 'production' : 'sandbox'
+    server: useSandbox ? 'sandbox' : 'production'
 });
 
 export const auth = betterAuth({

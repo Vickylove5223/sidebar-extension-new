@@ -2,11 +2,14 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { Polar } from "@polar-sh/sdk";
 
+// Determine Polar environment - use explicit POLAR_SANDBOX env var
+// On Vercel, NODE_ENV is always 'production', so we need an explicit flag
+const useSandbox = process.env.POLAR_SANDBOX === 'true';
+
 // Initialize Polar SDK client
 const polarClient = new Polar({
     accessToken: process.env.POLAR_ACCESS_TOKEN!,
-    // Match auth.ts: Use sandbox in development, production for live
-    server: process.env.NODE_ENV === 'production' ? 'production' : 'sandbox'
+    server: useSandbox ? 'sandbox' : 'production'
 });
 
 // Product IDs mapping - use both naming conventions for compatibility
